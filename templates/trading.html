@@ -59,10 +59,17 @@
       <button id="openLong">开多</button>
       <button id="openShort">开空</button>
       <button id="closePosition">平仓</button>
-      <span id="pnlDisplay">实时盈亏: 0</span>
+      <span id="pnlDisplay">当前盈亏: 0</span>
     </div>
   </div>
 
+  <div id="tradeInfo" style="margin: 20px 0; padding: 10px; background: #e0e0e0; border-radius: 5px;">
+    当前持仓：无<br>
+    入场价格：--<br>
+    浮动盈亏：0<br>
+    累计盈亏：0
+  </div>
+  
   <script>
     // 添加SQL.js初始化代码
     async function initSQL() {
@@ -84,6 +91,10 @@
     let loadedCount = 60;
     let isLineVisible = false;
     let currentOffset = 0; // 新增偏移量控制
+    let cumulativePnl = 0;  // 新增：累计盈亏变量
+    let totalPnl = 0;  // 改为累计盈亏
+    let tradeHistory = [];  // 新增交易历史记录
+
     // 初始化图表（修复LightweightCharts引用）
     function initChart() {
       const chartContainer = document.getElementById('chart-container');
@@ -171,24 +182,45 @@
         candleSeries.setData(barData);
         lineSeries.setData(lineData);
         chart.timeScale().fitContent();
+
+        updateTradeInfo();  // 新增，更新交易信息面板
       }
     }
 
     // 交易逻辑（保持不变）
     function updatePnl() {
-      if (position === 'long') pnl = (currentPrice - entryPrice) * 100;
-      else if (position === 'short') pnl = (entryPrice - currentPrice) * 100;
-      else pnl = 0;
-
+      // 如果有持仓，则计算当前未平仓盈亏，并累加之前累计盈亏
+      let displayPnl = cumulativePnl;
+      if (position === 'long') {
+        displayPnl += (currentPrice - entryPrice) * 100;
+      } else if (position === 'short') {
+        displayPnl += (entryPrice - currentPrice) * 100;
+      }
       const pnlElement = document.getElementById('pnlDisplay');
-      pnlElement.textContent = `实时盈亏: ${pnl.toFixed(2)}`;
-      pnlElement.style.color = pnl > 0 ? '#4CAF50' : pnl < 0 ? '#F44336' : 'white';
+      pnlElement.textContent = `累计盈亏: ${displayPnl.toFixed(2)}`;
+      pnlElement.style.color = displayPnl > 0 ? '#4CAF50' : displayPnl < 0 ? '#F44336' : 'white';
     }
+    
+    function updateTradeInfo() {
+      let info = '';
+      if (position) {
+        info += `当前持仓：${position === 'long' ? '多头' : '空头'}<br>`;
+        info += `入场价格：${entryPrice.toFixed(2)}<br>`;
+        const floatingPnl = position === 'long' ? (currentPrice - entryPrice) * 100 : (entryPrice - currentPrice) * 100;
+        info += `浮动盈亏：${floatingPnl.toFixed(2)}<br>`;
+      } else {
+        info += `当前持仓：无<br>`;
+        info += `入场价格：--<br>`;
+        info += `浮动盈亏：0<br>`;
+      }
+      info += `累计盈亏：${cumulativePnl.toFixed(2)}`;
+      document.getElementById('tradeInfo').innerHTML = info;
+    }    
 
     // 修改加载更多按钮事件
     document.getElementById('loadMore').addEventListener('click', () => {
       currentOffset += 1; // 每次偏移量+1
-      document.getElementById('loading').style.display = 'flex';
+      document.getElementById('loading').style.display = 'none';
       setTimeout(() => {
         loadChartData();
         document.getElementById('loading').style.display = 'none';
@@ -201,7 +233,10 @@
         entryPrice = currentPrice;
         alert(`开多成功! 入场价格: ${entryPrice.toFixed(2)}`);
         updatePnl();
-      } else alert('您已有持仓，请先平仓!');
+        updateTradeInfo();  // 新增，更新交易信息面板
+      } else {
+        alert('您已有持仓，请先平仓!');
+      }
     });
 
     document.getElementById('openShort').addEventListener('click', () => {
@@ -210,19 +245,27 @@
         entryPrice = currentPrice;
         alert(`开空成功! 入场价格: ${entryPrice.toFixed(2)}`);
         updatePnl();
-      } else alert('您已有持仓，请先平仓!');
+        updateTradeInfo();  // 新增，更新交易信息面板
+      } else {
+        alert('您已有持仓，请先平仓!');
+      }
     });
 
     document.getElementById('closePosition').addEventListener('click', () => {
       if (position) {
-        const profit = position === 'long' 
-          ? (currentPrice - entryPrice) * 100 
+        const profit = position === 'long'
+          ? (currentPrice - entryPrice) * 100
           : (entryPrice - currentPrice) * 100;
-        alert(`平仓成功! 入场价: ${entryPrice.toFixed(2)}, 平仓价: ${currentPrice.toFixed(2)}, 盈亏: ${profit.toFixed(2)}`);
+        alert(`平仓成功! 入场价: ${entryPrice.toFixed(2)}, 平仓价: ${currentPrice.toFixed(2)}, 本次盈亏: ${profit.toFixed(2)}`);
+        
+        cumulativePnl += profit; // 将本次盈利/亏损累计
         position = null;
         entryPrice = 0;
         updatePnl();
-      } else alert('您没有持仓!');
+        updateTradeInfo();  // 新增，更新交易信息面板
+      } else {
+        alert('您没有持仓!');
+      }
     });
 
     // 启动应用
