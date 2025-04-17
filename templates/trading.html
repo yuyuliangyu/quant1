@@ -11,63 +11,137 @@
   <script src="https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/sql-wasm.js"></script>
   
   <style>
-    /* 保持原有样式不变 */
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    #chart-container { width: 1000px; height: 600px; margin: 20px 0; position: relative; }
-    .controls { margin: 20px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; }
-    button { padding: 8px 15px; margin: 0 5px; cursor: pointer; }
-    #openLong { background-color: #4CAF50; color: white; }
-    #openShort { background-color: #F44336; color: white; }
-    #closePosition { background-color: #2196F3; color: white; }
-    #pnlDisplay { margin-left: 20px; font-weight: bold; padding: 8px 15px; background: #333; color: white; border-radius: 4px; }
-    select { padding: 5px; margin: 0 10px 0 5px; }
-    #loading { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-      background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; 
-      color: white; font-size: 24px; }
+    * { box-sizing: border-box; }
+    body, html { margin:0; padding:0; height:100%; }
+
+    /* 整体布局：上下留 60px 标题 + 控件，剩余空间做两栏 */
+    .main {
+      display: flex;
+      height: calc(100% - 60px);
+    }
+    .left, .right {
+      border: 1px solid #eee;
+    }
+    .left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .right {
+      width: 30%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 主图：撑满 left 容器的一半以上 */
+    #chart-container {
+      flex: 2;
+      /* 宽度自动100% */
+    }
+    .controls, #tradeInfo {
+      flex: 0 0 auto;
+      padding: 8px;
+      background: #fafafa;
+      border-top: 1px solid #ddd;
+    }
+
+    /* 右侧：净值曲线和历史表各占一半 */
+    #equity-container {
+      flex: 1;
+      overflow: hidden;
+    }
+    #history-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      background: #fff;
+    }
+    #trade-history {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    #trade-history th, #trade-history td {
+      border-bottom: 1px solid #ddd;
+      padding: 4px;
+      text-align: center;
+      font-size: 14px;
+    }
   </style>
+  
 </head>
+
 <body>
-  <div id="loading">加载数据库文件中...</div>
-  
-  <h1>量化交易图表</h1>
-  <div id="chart-container"></div>
-  
-  <div class="controls">
-    <!-- 控件保持原有结构不变 -->
-    <div>
-      <label>图表类型:</label>
-      <select id="chart-type">
-        <option value="candlestick" selected>蜡烛图</option>
-        <option value="bar">柱状图</option>
-      </select>
-      <label>比例类型:</label>
-      <select id="price-scale-type">
-        <option value="right" selected>右侧</option>
-        <option value="left">左侧</option>
-        <option value="log">对数</option>
-      </select>
-      <label>颜色方案:</label>
-      <select id="color-scheme">
-        <option value="muted" selected>柔和</option>
-        <option value="neon">霓虹</option>
-      </select>
-      <button id="toggle-line">切换趋势线</button>
-      <button id="loadMore">加载更多数据</button>
-    </div>
-    
-    <div style="margin-top: 15px;">
-      <button id="openLong">开多</button>
-      <button id="openShort">开空</button>
-      <button id="closePosition">平仓</button>
-      <span id="pnlDisplay">当前盈亏: 0</span>
-    </div>
+
+  <div id="loading" style="
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    font-size: 24px;
+  ">
+    加载数据库文件中…
   </div>
 
-  <div id="tradeInfo" style="margin: 20px 0; padding: 10px; background: #e0e0e0; border-radius: 5px;">
-    当前持仓：无<br>
-    入场价格：--<br>
-    浮动盈亏：0<br>
-    累计盈亏：0
+  <h1 style="height:60px; line-height:60px; text-align:center; margin:0;">量化交易图表</h1>
+  <div class="main">
+    <!-- 左侧 -->
+    <div class="left">
+      <div id="chart-container"></div>
+      <div class="controls">
+        <!-- 控件保持原有结构不变 -->
+        <div>
+          <label>图表类型:</label>
+          <select id="chart-type">
+            <option value="candlestick" selected>蜡烛图</option>
+            <option value="bar">柱状图</option>
+          </select>
+          <label>比例类型:</label>
+          <select id="price-scale-type">
+            <option value="right" selected>右侧</option>
+            <option value="left">左侧</option>
+            <option value="log">对数</option>
+          </select>
+          <label>颜色方案:</label>
+          <select id="color-scheme">
+            <option value="muted" selected>柔和</option>
+            <option value="neon">霓虹</option>
+          </select>
+          <button id="toggle-line">切换趋势线</button>
+          <button id="loadMore">加载更多数据</button>
+        </div>
+        
+        <div style="margin-top: 15px;">
+          <button id="openLong">开多</button>
+          <button id="openShort">开空</button>
+          <button id="closePosition">平仓</button>
+          <span id="pnlDisplay">当前盈亏: 0</span>
+        </div>
+      </div>
+
+      <div id="tradeInfo">
+        当前持仓：无&nbsp;|&nbsp;入场：--&nbsp;|&nbsp;浮动盈亏：0&nbsp;|&nbsp;累计盈亏：0
+      </div>
+    </div>
+
+    <!-- 右侧 -->
+    <div class="right">
+      <div id="equity-container"></div>
+      <div id="history-container">
+        <h2>交易历史</h2>
+        <table id="trade-history">
+          <thead>
+            <tr><th>时间</th><th>类型</th><th>价格</th><th>盈亏</th><th>累计</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
   </div>
   
   <script>
@@ -80,25 +154,31 @@
     }
 
     // 全局变量
-    let db;
-    let chart;
-    let candleSeries;
-    let lineSeries;
-    let currentPrice = 0;
-    let position = null;
-    let entryPrice = 0;
-    let pnl = 0;
-    let loadedCount = 60;
-    let isLineVisible = false;
-    let currentOffset = 0; // 新增偏移量控制
-    let cumulativePnl = 0;  // 新增：累计盈亏变量
-    let totalPnl = 0;  // 改为累计盈亏
-    let tradeHistory = [];  // 新增交易历史记录
+    // 最顶部只声明一次
+    let chart, candleSeries, lineSeries;
+    let equityChart, equitySeries;
+    let lastTime = 0, currentPrice = 0;
+    let db, position = null, entryPrice = 0;
+    let loadedCount = 60, currentOffset = 0;
+    let cumulativePnl = 0, tradeHistory = [];
+    // 假设你有一个全局数组 lastBar，通过 loadChartData() 保留最新一根：
+    let lastBar = null;
+    let allBarData = [];
+
+    function bindAutoResize(chart, container) {
+      window.addEventListener('resize', () => {
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        chart.applyOptions({ width: w, height: h });
+        chart.timeScale().fitContent();
+      });
+    }
 
     // 初始化图表（修复LightweightCharts引用）
     function initChart() {
-      const chartContainer = document.getElementById('chart-container');
-      chart = LightweightCharts.createChart(chartContainer, {
+      const c = document.getElementById('chart-container');
+
+      chart = LightweightCharts.createChart(c, {
         width: 1000,
         height: 500,
         layout: { backgroundColor: '#ffffff', textColor: 'rgba(0, 0, 0, 0.9)' },
@@ -123,8 +203,35 @@
         lineWidth: 2,
         visible: false,
       });
+      
+      bindAutoResize(chart, c);
     }
 
+    function initEquityChart() {
+      const e = document.getElementById('equity-container');
+
+      equityChart = LightweightCharts.createChart(e, {
+        width: 1000,
+        height: 200,
+        rightPriceScale: { visible: false },
+        leftPriceScale:  { visible: true },
+        layout: { backgroundColor: '#ffffff', textColor: 'rgba(0,0,0,0.9)' },
+        grid: {
+          vertLines: { color: 'rgba(0,0,0,0.1)' },
+          horzLines: { color: 'rgba(0,0,0,0.1)' }
+        },
+        timeScale: { borderColor: 'rgba(0,0,0,0.1)', timeVisible: true }
+      });
+
+        // —— 只创建一条净值线 —— 
+      equitySeries = equityChart.addLineSeries({
+        lineWidth: 2,
+        color: '#FF9900'
+      });
+
+      bindAutoResize(equityChart, e);
+    }
+    
     // 加载数据库文件（添加错误处理）
     async function loadDatabase() {
       try {
@@ -145,48 +252,75 @@
       }
     }
 
-    // 加载K线数据（修改后的逻辑）
     function loadChartData() {
       if (!db) {
         console.error('数据库未初始化');
         return;
       }
-
+    
       const stmt = db.prepare(`
         SELECT timestamp, open, high, low, close 
-        FROM trading_data 
-        ORDER BY timestamp ASC 
-        LIMIT ${loadedCount} OFFSET ${currentOffset}
+          FROM trading_data 
+         ORDER BY timestamp ASC 
+         LIMIT ${loadedCount} OFFSET ${currentOffset}
       `);
-
+    
       const barData = [];
       const lineData = [];
-
+    
       while (stmt.step()) {
         const row = stmt.getAsObject();
         const date = luxon.DateTime.fromSQL(row.timestamp);
-        if (!date.isValid) {
-          console.error('无效的时间戳:', row.timestamp);
-          continue;
-        }
-
+        if (!date.isValid) continue;
         const time = date.toJSDate().getTime() / 1000;
         barData.push({ time, open: row.open, high: row.high, low: row.low, close: row.close });
         lineData.push({ time, value: row.close });
       }
-
       stmt.free();
-
+    
       if (barData.length > 0) {
+        // 更新主图
+        lastTime = barData[barData.length - 1].time;
         currentPrice = barData[barData.length - 1].close;
+    
+        // —— 1) 保存最新的 K 线数据 —— 
+        allBarData = barData;
+        
+        // —— 2) 更新主图 —— 
         candleSeries.setData(barData);
         lineSeries.setData(lineData);
         chart.timeScale().fitContent();
-
-        updateTradeInfo();  // 新增，更新交易信息面板
+        
+        // —— 3) 重新计算并绘制连续净值曲线 —— 
+        const eqData = calculateEquitySeries(allBarData, tradeHistory);
+        equitySeries.setData(eqData);
+        equityChart.timeScale().fitContent();
+    
+        // 更新交易信息面板
+        updateTradeInfo();
       }
-    }
 
+      console.log('barData:', barData.length, barData.slice(0,3));
+      // loadChartData() 末尾：
+      lastBar = barData[barData.length - 1];
+    }    
+
+    function renderTradeHistory() {
+      const tbody = document.querySelector('#trade-history tbody');
+      tbody.innerHTML = '';
+      tradeHistory.forEach(tr => {
+        const trEl = document.createElement('tr');
+        trEl.innerHTML = `
+          <td style="padding:4px">${luxon.DateTime.fromSeconds(tr.time).toFormat('yyyy-LL-dd HH:mm:ss')}</td>
+          <td style="padding:4px">${tr.type}</td>
+          <td style="padding:4px">${tr.price.toFixed(2)}</td>
+          <td style="padding:4px">${tr.profit !== null ? tr.profit.toFixed(2) : '--'}</td>
+          <td style="padding:4px">${tr.cumulativePnl.toFixed(2)}</td>
+        `;
+        tbody.appendChild(trEl);
+      });
+    }
+    
     // 交易逻辑（保持不变）
     function updatePnl() {
       // 如果有持仓，则计算当前未平仓盈亏，并累加之前累计盈亏
@@ -217,6 +351,50 @@
       document.getElementById('tradeInfo').innerHTML = info;
     }    
 
+    /**
+    * 计算连续净值曲线
+    * @param {Array<{time:number,open:number,high:number,low:number,close:number}>} barData 
+    * @param {Array<{time:number,type:string,price:number,profit:number, cumulativePnl:number}>} tradeHistory 
+    * @returns {Array<{time:number,value:number}>} equityPoints
+    */
+    function calculateEquitySeries(barData, tradeHistory) {
+      // 先给每个 tradeHistory 打个标记，确保只处理一次
+      tradeHistory.forEach(tr => tr._handled = false);
+
+      let realized = 0;       // 已实现盈亏
+      let open   = null;      // 当前未平仓的信息 { price, type }
+
+      const equityPoints = barData.map(bar => {
+        // 1) 先把所有 <= bar.time 的“平仓”交易都算进 realized
+        tradeHistory.forEach(tr => {
+          if (!tr._handled && tr.time <= bar.time) {
+            if (tr.type === '开多' || tr.type === '开空') {
+              open = { price: tr.price, type: tr.type };
+            } else if (tr.type === '平仓') {
+              realized += tr.profit;
+              open = null;
+            }
+            tr._handled = true;
+          }
+        });
+
+        // 2) 再算一下浮动盈亏
+        let floating = 0;
+        if (open) {
+          if (open.type === '开多')  floating = (bar.close - open.price) * 100;
+          if (open.type === '开空')  floating = (open.price - bar.close) * 100;
+        }
+
+        return {
+          time:  bar.time,
+          value: realized + floating,
+        };
+      });
+
+      return equityPoints;
+    }
+
+
     // 修改加载更多按钮事件
     document.getElementById('loadMore').addEventListener('click', () => {
       currentOffset += 1; // 每次偏移量+1
@@ -232,37 +410,82 @@
         position = 'long';
         entryPrice = currentPrice;
         alert(`开多成功! 入场价格: ${entryPrice.toFixed(2)}`);
+        // 记录日志
+        tradeHistory.push({
+          time: lastBar.time,
+          type: '开多',
+          price: entryPrice,
+          profit: null,
+          cumulativePnl
+        });
+        renderTradeHistory();
+
+        // —— 每次交易后，用最新 allBarData + tradeHistory 重新算一遍净值 —— 
+        const eqData = calculateEquitySeries(allBarData, tradeHistory);
+        equitySeries.setData(eqData);
+        equityChart.timeScale().fitContent();
+
         updatePnl();
-        updateTradeInfo();  // 新增，更新交易信息面板
+        updateTradeInfo();
       } else {
         alert('您已有持仓，请先平仓!');
       }
     });
-
+    
     document.getElementById('openShort').addEventListener('click', () => {
       if (!position) {
         position = 'short';
         entryPrice = currentPrice;
         alert(`开空成功! 入场价格: ${entryPrice.toFixed(2)}`);
+        tradeHistory.push({
+          time: lastBar.time,
+          type: '开空',
+          price: entryPrice,
+          profit: null,
+          cumulativePnl
+        });
+        renderTradeHistory();
+
+        // —— 每次交易后，用最新 allBarData + tradeHistory 重新算一遍净值 —— 
+        const eqData = calculateEquitySeries(allBarData, tradeHistory);
+        equitySeries.setData(eqData);
+        equityChart.timeScale().fitContent();
+
         updatePnl();
-        updateTradeInfo();  // 新增，更新交易信息面板
+        updateTradeInfo();
       } else {
         alert('您已有持仓，请先平仓!');
       }
     });
-
+    
     document.getElementById('closePosition').addEventListener('click', () => {
       if (position) {
         const profit = position === 'long'
           ? (currentPrice - entryPrice) * 100
           : (entryPrice - currentPrice) * 100;
         alert(`平仓成功! 入场价: ${entryPrice.toFixed(2)}, 平仓价: ${currentPrice.toFixed(2)}, 本次盈亏: ${profit.toFixed(2)}`);
-        
-        cumulativePnl += profit; // 将本次盈利/亏损累计
+        cumulativePnl += profit;
+        // 记录日志
+        tradeHistory.push({
+          time: lastBar.time,
+          type: '平仓',
+          price: currentPrice,
+          profit,
+          cumulativePnl
+        });
+        renderTradeHistory();
+
+        // —— 每次交易后，用最新 allBarData + tradeHistory 重新算一遍净值 —— 
+        const eqData = calculateEquitySeries(allBarData, tradeHistory);
+        equitySeries.setData(eqData);
+        equityChart.timeScale().fitContent();
+
         position = null;
         entryPrice = 0;
+
+        entryPrice = 0;
         updatePnl();
-        updateTradeInfo();  // 新增，更新交易信息面板
+        updateTradeInfo();
       } else {
         alert('您没有持仓!');
       }
@@ -270,6 +493,7 @@
 
     // 启动应用
     initChart();
+    initEquityChart();
     loadDatabase();
   </script>
 </body>
