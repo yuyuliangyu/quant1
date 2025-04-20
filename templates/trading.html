@@ -66,6 +66,24 @@
       text-align: center;
       font-size: 14px;
     }
+    /* ===== 在这里，紧接着现有规则，插入拖拽条样式 ===== */
+    /* 分割条共用 */
+    .resizer {
+      background: #ddd;
+      z-index: 10;
+    }
+
+    /* 左右分割条 */
+    .resizer-vertical {
+      width: 5px;
+      cursor: col-resize;
+    }
+
+    /* 上下分割条 */
+    .resizer-horizontal {
+      height: 5px;
+      cursor: row-resize;
+    }
   </style>
   
 </head>
@@ -93,6 +111,9 @@
     <!-- 左侧 -->
     <div class="left">
       <div id="chart-container"></div>
+
+      <!-- 左侧：图表/控件 间可拖拽分割 -->
+      <div id="left-horizontal-resizer" class="resizer resizer-horizontal"></div>
       <div class="controls">
         <!-- 控件保持原有结构不变 -->
         <div>
@@ -129,9 +150,15 @@
       </div>
     </div>
 
+    <!-- 新增：左右拖拽分割条 -->
+    <div id="vertical-resizer" class="resizer resizer-vertical"></div>
+
     <!-- 右侧 -->
     <div class="right">
       <div id="equity-container"></div>
+      <!-- 新增：上下拖拽分割条 -->
+      <div id="horizontal-resizer" class="resizer resizer-horizontal"></div>
+
       <div id="history-container">
         <h2>交易历史</h2>
         <table id="trade-history">
@@ -409,16 +436,7 @@
       if (!position) {
         position = 'long';
         entryPrice = currentPrice;
-        alert(`开多成功! 入场价格: ${entryPrice.toFixed(2)}`);
-        // 记录日志
-        tradeHistory.push({
-          time: lastBar.time,
-          type: '开多',
-          price: entryPrice,
-          profit: null,
-          cumulativePnl
-        });
-        renderTradeHistory();
+        // alert(`开多成功! 入场价格: ${entryPrice.toFixed(2)}`);
 
         // —— 每次交易后，用最新 allBarData + tradeHistory 重新算一遍净值 —— 
         const eqData = calculateEquitySeries(allBarData, tradeHistory);
@@ -436,15 +454,7 @@
       if (!position) {
         position = 'short';
         entryPrice = currentPrice;
-        alert(`开空成功! 入场价格: ${entryPrice.toFixed(2)}`);
-        tradeHistory.push({
-          time: lastBar.time,
-          type: '开空',
-          price: entryPrice,
-          profit: null,
-          cumulativePnl
-        });
-        renderTradeHistory();
+        // alert(`开空成功! 入场价格: ${entryPrice.toFixed(2)}`);
 
         // —— 每次交易后，用最新 allBarData + tradeHistory 重新算一遍净值 —— 
         const eqData = calculateEquitySeries(allBarData, tradeHistory);
@@ -463,7 +473,7 @@
         const profit = position === 'long'
           ? (currentPrice - entryPrice) * 100
           : (entryPrice - currentPrice) * 100;
-        alert(`平仓成功! 入场价: ${entryPrice.toFixed(2)}, 平仓价: ${currentPrice.toFixed(2)}, 本次盈亏: ${profit.toFixed(2)}`);
+        // alert(`平仓成功! 入场价: ${entryPrice.toFixed(2)}, 平仓价: ${currentPrice.toFixed(2)}, 本次盈亏: ${profit.toFixed(2)}`);
         cumulativePnl += profit;
         // 记录日志
         tradeHistory.push({
@@ -495,6 +505,75 @@
     initChart();
     initEquityChart();
     loadDatabase();
+
+    // 左侧：图表 与 控件/持仓 信息 之间的上下拖拽
+    (function(){
+      const resizer = document.getElementById('left-horizontal-resizer');
+      const topPane = document.getElementById('chart-container');
+      // 底部我们让控件+tradeInfo 自适应，不需要单独操作
+      let startY, startTopHeight;
+      resizer.addEventListener('mousedown', e => {
+        startY = e.clientY;
+        startTopHeight = topPane.getBoundingClientRect().height;
+        document.addEventListener('mousemove', resize);
+        document.addEventListener('mouseup', stopResize);
+      });
+      function resize(e) {
+        const dy = e.clientY - startY;
+        // 限制最小高度 200px
+        const newTopH = Math.max(200, startTopHeight + dy);
+        topPane.style.flex = `0 0 ${newTopH}px`;
+      }
+      function stopResize() {
+        document.removeEventListener('mousemove', resize);
+        document.removeEventListener('mouseup', stopResize);
+      }
+    })();
+
+    // 左右分割拖拽
+    (function(){
+      const resizer = document.getElementById('vertical-resizer');
+      const left = document.querySelector('.left');
+      let startX, startWidth;
+      resizer.addEventListener('mousedown', e => {
+        startX = e.clientX;
+        startWidth = left.getBoundingClientRect().width;
+        document.addEventListener('mousemove', resize);
+        document.addEventListener('mouseup', stopResize);
+      });
+      function resize(e) {
+        const dx = e.clientX - startX;
+        const newLeftWidth = Math.max(200, startWidth + dx);
+        left.style.flex = `0 0 ${newLeftWidth}px`;
+      }
+      function stopResize() {
+        document.removeEventListener('mousemove', resize);
+        document.removeEventListener('mouseup', stopResize);
+      }
+    })();
+
+    // 上下分割拖拽（右侧区域）
+    (function(){
+      const resizer = document.getElementById('horizontal-resizer');
+      const topPane = document.getElementById('equity-container');
+      let startY, startTopHeight;
+      resizer.addEventListener('mousedown', e => {
+        startY = e.clientY;
+        startTopHeight = topPane.getBoundingClientRect().height;
+        document.addEventListener('mousemove', resize);
+        document.addEventListener('mouseup', stopResize);
+      });
+      function resize(e) {
+        const dy = e.clientY - startY;
+        const newTopHeight = Math.max(100, startTopHeight + dy);
+        topPane.style.flex = `0 0 ${newTopHeight}px`;
+      }
+      function stopResize() {
+        document.removeEventListener('mousemove', resize);
+        document.removeEventListener('mouseup', stopResize);
+      }
+    })();
+
   </script>
 </body>
 </html>

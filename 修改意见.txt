@@ -1,3 +1,17 @@
+建议框架
+quant-dashboard/             # 项目根目录
+├── app.py                   # Flask 应用
+├── requirements.txt         # Python 依赖列表
+├── templates/               # Flask 模板目录
+│   └── trading.html         # 主 HTML 页面
+├── static/                  # 静态资源目录
+│   ├── css/
+│   │   └── styles.css       # 样式表
+│   ├── js/
+│   │   └── app.js           # 前端业务脚本
+│   └── trading_data.db      # SQLite 数据库文件（请放入真实数据）
+└── README.md                # 项目说明
+
 交易日志（交易历史记录）
 
 为什么需要：用户常常需要回顾过去的操作，比如开仓、加仓、平仓的具体价格与时间，这对于回测和模拟交易非常重要。

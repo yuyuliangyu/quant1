@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>量化交易图表</title>
+  <!-- 样式 -->
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <!-- 外部库 -->
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4"></script>
+  <script src="https://unpkg.com/lightweight-charts@4.0.0/dist/lightweight-charts.standalone.production.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/sql-wasm.js"></script>
+</head>
+<body>
+
+    <div id="loading" style="
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    font-size: 24px;
+  ">
+    加载数据库文件中…
+  </div>
+
+  <!-- 页面头部容器 -->
+  <header class="page-header">
+    <!-- 左上角的小猫 -->
+    <img src="/static/img/cat.gif" alt="小猫" class="page-header__icon" />
+    <!-- 居中的标题 -->
+    <h1 class="page-header__title">量化交易图表</h1>
+  </header>
+  <div class="main">
+    <!-- 左侧 -->
+    <div class="left">
+      <div id="chart-container"></div>
+
+      <!-- 左侧：图表/控件 间可拖拽分割 -->
+      <div id="left-horizontal-resizer" class="resizer resizer-horizontal"></div>
+      <div class="controls">
+        <!-- 控件保持原有结构不变 -->
+        <div>
+          <label>图表类型:</label>
+          <select id="chart-type">
+            <option value="candlestick" selected>蜡烛图</option>
+            <option value="bar">柱状图</option>
+          </select>
+          <label>比例类型:</label>
+          <select id="price-scale-type">
+            <option value="right" selected>右侧</option>
+            <option value="left">左侧</option>
+            <option value="log">对数</option>
+          </select>
+          <label>颜色方案:</label>
+          <select id="color-scheme">
+            <option value="muted" selected>柔和</option>
+            <option value="neon">霓虹</option>
+          </select>
+          <button id="toggle-line">切换趋势线</button>
+          <button id="loadMore">加载更多数据</button>
+          <label style="margin-left:8px;">
+            <input type="checkbox" id="keepHistory" checked />
+            保留历史数据
+          </label>
+        </div>
+        
+        <div style="margin-top: 15px;">
+          <button id="openLong">开多</button>
+          <button id="openShort">开空</button>
+          <button id="closePosition">平仓</button>
+          <span id="pnlDisplay">当前盈亏: 0</span>
+        </div>
+      </div>
+
+      <div id="tradeInfo">
+        当前持仓：无&nbsp;|&nbsp;入场：--&nbsp;|&nbsp;浮动盈亏：0&nbsp;|&nbsp;累计盈亏：0
+      </div>
+    </div>
+
+    <!-- 新增：左右拖拽分割条 -->
+    <div id="vertical-resizer" class="resizer resizer-vertical"></div>
+
+    <!-- 右侧 -->
+    <div class="right">
+      <div id="equity-container"></div>
+      <!-- 新增：上下拖拽分割条 -->
+      <div id="horizontal-resizer" class="resizer resizer-horizontal"></div>
+
+      <div id="history-container">
+        <h2>交易历史</h2>
+        <table id="trade-history">
+            <thead>
+              <tr>
+                <th>开仓方向</th>
+                <th>开仓时间</th>
+                <th>平仓时间</th>
+                <th>开仓价</th>
+                <th>平仓价</th>
+                <th>盈亏</th>
+                <th>累计盈亏</th>
+              </tr>
+            </thead>
+            <tbody>
+                <!-- 这里由 JS 动态填充行 -->
+            </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 前端脚本 -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
