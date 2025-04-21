@@ -6,7 +6,7 @@ app = Flask(__name__)
 # 根路径返回主页面
 @app.route('/')
 def trading_dashboard():
-    return render_template('trading1.html')
+    return render_template('index.html')
 
 # 静态文件（数据库）
 @app.route('/static/<path:filename>')
